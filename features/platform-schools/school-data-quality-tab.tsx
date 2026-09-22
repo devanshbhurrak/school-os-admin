@@ -74,7 +74,7 @@ export function SchoolDataQualityTab({ schoolId }: { schoolId: string }) {
   const missingGender = persons.filter((p) => !p.gender).length;
   if (missingGender > 0) issues.push({ severity: "LOW", message: `${missingGender} persons missing gender`, count: missingGender, href: schoolPortal ? `${schoolPortal}/people?schoolId=${schoolId}` : `/platform/schools/${schoolId}/people` });
 
-  const classSubjectLinks = (classSubjectsQuery.data?.items ?? []) as unknown as { academic_class_id: string }[];
+  const classSubjectLinks = classSubjectsQuery.data?.items ?? [];
   const classIdsWithSubjects = new Set(classSubjectLinks.map((cs) => cs.academic_class_id));
   const classesNoSubjects = classes.filter((c) => !classIdsWithSubjects.has(c.id)).length;
   if (classesNoSubjects > 0) {

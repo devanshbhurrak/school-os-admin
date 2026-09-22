@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ErrorState } from "@/components/patterns/error-state";
-import { OrganizationStatus, type Organization } from "@/types";
+import { OrganizationStatus, type Organization, type OrganizationUpdate } from "@/types";
 import { isStaleResourceError } from "@/lib/error-messages";
 
 // ── Profile form ────────────────────────────────────────────────────────────
@@ -64,12 +64,14 @@ function ProfileForm({ org }: { org: Organization }) {
 
   const mutation = useMutation({
     mutationFn: (values: ProfileValues) => {
-      const payload: Record<string, unknown> = { ...values, version: org.version };
-      // Convert empty strings to null for nullable fields
-      (["legal_name", "contact_email", "contact_phone"] as const).forEach((k) => {
-        if (payload[k] === "") payload[k] = null;
-      });
-      return updateOrganization(org.id, payload as never);
+      const payload: OrganizationUpdate = {
+        ...values,
+        version: org.version,
+        legal_name: values.legal_name || null,
+        contact_email: values.contact_email || null,
+        contact_phone: values.contact_phone || null,
+      };
+      return updateOrganization(org.id, payload);
     },
     onSuccess: (updated) => {
       queryClient.setQueryData(platformKeys.organization(org.id), updated);

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { Download, FilterX } from "lucide-react";
+import type { AuditLogListParams } from "@/services/audit";
 
 const ENTITY_TYPES = ["ALL", "organization", "school", "user", "membership", "role", "person", "academic_year", "academic_term", "academic_class", "subject", "class_subject", "cohort"] as const;
 const ACTIONS = ["ALL", "CREATE", "UPDATE", "DELETE", "LOGIN_SUCCESS", "LOGIN_FAILURE"] as const;
@@ -28,7 +29,7 @@ export function AuditLogPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
 
-  const params: Record<string, string | undefined> = {};
+  const params: AuditLogListParams = {};
   if (entityType !== "ALL") params.entity_type = entityType;
   if (actorId.trim()) params.actor_user_id = actorId.trim();
   if (schoolId.trim()) params.school_id = schoolId.trim();
@@ -39,11 +40,9 @@ export function AuditLogPage() {
   // shows unfiltered results; we surface a hint. Client-side filtering of the loaded page is
   // handled by passing organization_id/action into the audit table's post-filter.
 
-  const auditParams: Record<string, string | undefined> & { action?: string; organization_id?: string } = {
-    ...params,
-  };
-  if (action !== "ALL") (auditParams as Record<string, string>).action = action;
-  if (orgId.trim()) (auditParams as Record<string, string>).organization_id = orgId.trim();
+  const auditParams: AuditLogListParams = { ...params };
+  if (action !== "ALL") auditParams.action = action;
+  if (orgId.trim()) auditParams.organization_id = orgId.trim();
 
   const hasFilters = entityType !== "ALL" || action !== "ALL" || actorId || schoolId || orgId || from || to;
 
@@ -123,7 +122,7 @@ export function AuditLogPage() {
         </CardContent>
       </Card>
 
-      <AuditLogTable queryKey={platformKeys.audit(auditParams as never)} params={params as never} clientFilter={{ organization_id: orgId.trim() || undefined, action: action !== "ALL" ? action : undefined }} />
+      <AuditLogTable queryKey={platformKeys.audit(auditParams)} params={params} clientFilter={{ organization_id: orgId.trim() || undefined, action: action !== "ALL" ? action : undefined }} />
     </div>
   );
 }

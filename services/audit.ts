@@ -79,6 +79,8 @@ export interface AuditLogListParams extends CursorParams {
   entity_id?: string;
   actor_user_id?: string;
   school_id?: string;
+  organization_id?: string;
+  action?: string;
   created_from?: string;
   created_to?: string;
 }

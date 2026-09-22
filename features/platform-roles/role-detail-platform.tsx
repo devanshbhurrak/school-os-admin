@@ -54,7 +54,7 @@ function MembershipsUsingRole({ role }: { role: Role }) {
   const { items, hasMore, isInitialLoading, isFetchingMore, isError, fetchMore } =
     useCursorPagination<Membership>({
       queryKey: [...platformKeys.roles({}), role.id, "memberships"] as const,
-      queryFn: (params) => listMemberships(params as Record<string, string> as never),
+      queryFn: (params) => listMemberships(params),
       limit: 50,
     });
 

@@ -112,7 +112,7 @@ export const platformKeys = {
     ["platform", "schools", schoolId, "audit", params] as const,
 
   // Users
-  users: (params: CursorParams = {}) =>
+  users: (params: CursorParams & { search?: string } = {}) =>
     ["platform", "users", params] as const,
   user: (userId: string) =>
     ["platform", "users", userId] as const,
@@ -130,4 +130,7 @@ export const platformKeys = {
   // Platform-wide audit
   audit: (params: AuditLogListParams = {}) =>
     ["platform", "audit", params] as const,
+
+  // Platform stats
+  platformStats: () => ["platform", "stats"] as const,
 };

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { AlertTriangle, BookOpen, Plus, Activity, GraduationCap } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { listOrganizations, listSchools, listUsers, listMemberships } from "@/services/iam";
+import { listOrganizations, listSchools, listUsers, listMemberships, getPlatformStats } from "@/services/iam";
 import { listAuditLogs } from "@/services/audit";
-import { platformKeys } from "@/lib/query-keys";
+import { platformKeys, STALE_TIME } from "@/lib/query-keys";
 import { API_BASE_URL } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -53,11 +53,11 @@ function NeedsAttention() {
   });
   const usersQuery = useQuery({
     queryKey: platformKeys.users({ limit: 100 }),
-    queryFn: () => listUsers({ limit: 100 } as never),
+    queryFn: () => listUsers({ limit: 100 }),
   });
   const membershipsQuery = useQuery({
-    queryKey: ["platform", "memberships", { limit: 100 }] as unknown as readonly unknown[],
-    queryFn: () => listMemberships({ limit: 100 } as never),
+    queryKey: ["platform", "memberships-alert", { limit: 100 }] as const,
+    queryFn: () => listMemberships({ limit: 100 }),
   });
 
   if (orgsQuery.isLoading || schoolsQuery.isLoading || usersQuery.isLoading) {
@@ -67,7 +67,7 @@ function NeedsAttention() {
   const orgs = orgsQuery.data?.items ?? [];
   const schools = schoolsQuery.data?.items ?? [];
   const users = usersQuery.data?.items ?? [];
-  const memberships = (membershipsQuery.data as unknown as { items: { user_id: string; status: string }[] })?.items ?? [];
+  const memberships = membershipsQuery.data?.items ?? [];
 
   const alerts: { message: string; href: string }[] = [];
 
@@ -99,12 +99,12 @@ function NeedsAttention() {
   const suspendedUserIds = new Set(users.filter((u) => u.status === "SUSPENDED").map((u) => u.id));
   const suspendedActiveMemberships = memberships.filter((m) => suspendedUserIds.has(m.user_id) && m.status === "ACTIVE");
   if (suspendedActiveMemberships.length > 0) {
-    const firstUserId = (suspendedActiveMemberships[0] as unknown as { user_id: string }).user_id;
+    const firstUserId = suspendedActiveMemberships[0].user_id;
     alerts.push({ message: `${suspendedActiveMemberships.length} suspended users with active memberships`, href: `/platform/users/${firstUserId}/memberships` });
   }
 
   // School with no users → School detail → Users tab
-  const schoolIdsWithMemberships = new Set(memberships.filter((m) => (m as unknown as { school_id: string | null }).school_id).map((m) => (m as unknown as { school_id: string }).school_id));
+  const schoolIdsWithMemberships = new Set(memberships.filter((m) => m.school_id).map((m) => m.school_id as string));
   const schoolsWithNoUsers = schools.filter((s) => !schoolIdsWithMemberships.has(s.id));
   if (schoolsWithNoUsers.length > 0 && schools.length > 0) {
     const first = schoolsWithNoUsers[0];
@@ -142,19 +142,10 @@ function NeedsAttention() {
 }
 
 export function PlatformDashboard() {
-  const orgsQuery = useQuery({
-    queryKey: platformKeys.organizations({ limit: 100 }),
-    queryFn: () => listOrganizations({ limit: 100 }),
-  });
-
-  const schoolsQuery = useQuery({
-    queryKey: platformKeys.schools({ limit: 100 }),
-    queryFn: () => listSchools({ limit: 100 }),
-  });
-
-  const usersQuery = useQuery({
-    queryKey: platformKeys.users({ limit: 100 }),
-    queryFn: () => listUsers({ limit: 100 } as never),
+  const statsQuery = useQuery({
+    queryKey: platformKeys.platformStats(),
+    queryFn: getPlatformStats,
+    staleTime: STALE_TIME.frequent,
   });
 
   const auditQuery = useQuery({
@@ -182,18 +173,18 @@ export function PlatformDashboard() {
       <div className="grid gap-4 sm:grid-cols-3">
         <PlatformStatCard
           label="Organizations"
-          value={orgsQuery.data ? `${orgsQuery.data.items.length}${orgsQuery.data.has_more ? "+" : ""}` : "—"}
-          isLoading={orgsQuery.isLoading}
+          value={statsQuery.data?.org_count ?? null}
+          isLoading={statsQuery.isLoading}
         />
         <PlatformStatCard
           label="Schools"
-          value={schoolsQuery.data ? `${schoolsQuery.data.items.length}${schoolsQuery.data.has_more ? "+" : ""}` : "—"}
-          isLoading={schoolsQuery.isLoading}
+          value={statsQuery.data?.school_count ?? null}
+          isLoading={statsQuery.isLoading}
         />
         <PlatformStatCard
           label="Users"
-          value={usersQuery.data ? `${usersQuery.data.items.length}${usersQuery.data.has_more ? "+" : ""}` : "—"}
-          isLoading={usersQuery.isLoading}
+          value={statsQuery.data?.user_count ?? null}
+          isLoading={statsQuery.isLoading}
         />
       </div>
 

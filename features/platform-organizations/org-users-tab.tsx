@@ -28,13 +28,13 @@ export function OrgUsersTab({ orgId }: OrgUsersTabProps) {
     isError: membershipsError,
   } = useCursorPagination({
     queryKey: platformKeys.orgMembershipsForUsers(orgId),
-    queryFn: (params) => listMemberships({ ...params, organization_id: orgId } as never),
+    queryFn: (params) => listMemberships({ ...params, organization_id: orgId }),
     limit: 200,
   });
 
   const schoolsQuery = useQuery({
-    queryKey: platformKeys.orgSchools(orgId),
-    queryFn: () => listSchools({ limit: 100, organization_id: orgId } as never),
+    queryKey: platformKeys.orgSchools(orgId, { limit: 100 }),
+    queryFn: () => listSchools({ limit: 100, organization_id: orgId }),
     enabled: !!orgId,
   });
 
@@ -48,7 +48,7 @@ export function OrgUsersTab({ orgId }: OrgUsersTabProps) {
 
   const { data: allUsersPage, isLoading: usersLoading, isError: usersError } = useQuery({
     queryKey: platformKeys.users({ limit: 500 }),
-    queryFn: () => listUsers({ limit: 500 } as never),
+    queryFn: () => listUsers({ limit: 500 }),
     enabled: userIds.length > 0,
   });
 
@@ -59,9 +59,9 @@ export function OrgUsersTab({ orgId }: OrgUsersTabProps) {
   const membershipsByUser = useMemo(() => {
     const map = new Map<string, typeof memberships>();
     memberships.forEach((m) => {
-      const arr = map.get(m.user_id) ?? [];
+      const arr = map.get(m.user_id) ?? ([] as typeof memberships);
       arr.push(m);
-      map.set(m.user_id, arr as never);
+      map.set(m.user_id, arr);
     });
     return map;
   }, [memberships]);

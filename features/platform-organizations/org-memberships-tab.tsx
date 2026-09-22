@@ -89,17 +89,17 @@ export function OrgMembershipsTab({ orgId }: OrgMembershipsTabProps) {
   const { items, hasMore, isInitialLoading, isFetchingMore, isError, fetchMore } =
     useCursorPagination<Membership>({
       queryKey: platformKeys.orgMemberships(orgId),
-      queryFn: (params) => listMemberships({ ...params, organization_id: orgId } as never),
+      queryFn: (params) => listMemberships({ ...params, organization_id: orgId }),
     });
 
   const schoolsQuery = useQuery({
-    queryKey: platformKeys.orgSchools(orgId),
-    queryFn: () => listSchools({ limit: 100, organization_id: orgId } as never),
+    queryKey: platformKeys.orgSchools(orgId, { limit: 100 }),
+    queryFn: () => listSchools({ limit: 100, organization_id: orgId }),
     enabled: !!orgId,
   });
   const rolesData = useQuery({
     queryKey: platformKeys.roles({ limit: 100 }),
-    queryFn: () => listRoles({ limit: 100 } as never),
+    queryFn: () => listRoles({ limit: 100 }),
   });
 
   const filtered = useMemo(() => {

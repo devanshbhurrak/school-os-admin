@@ -44,14 +44,14 @@ export function OrgOverviewTab({ orgId }: OrgOverviewTabProps) {
   });
 
   const schoolsQuery = useQuery({
-    queryKey: platformKeys.orgSchools(orgId),
-    queryFn: () => listSchools({ limit: 100, organization_id: orgId } as never),
+    queryKey: platformKeys.orgSchools(orgId, { limit: 100 }),
+    queryFn: () => listSchools({ limit: 100, organization_id: orgId }),
     enabled: !!orgId,
   });
 
   const membershipsQuery = useQuery({
-    queryKey: platformKeys.orgMemberships(orgId),
-    queryFn: () => listMemberships({ limit: 100, organization_id: orgId } as never),
+    queryKey: platformKeys.orgMemberships(orgId, { limit: 100 }),
+    queryFn: () => listMemberships({ limit: 100, organization_id: orgId }),
     enabled: !!orgId,
   });
 
@@ -131,24 +131,24 @@ export function OrgOverviewTab({ orgId }: OrgOverviewTabProps) {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-2xl font-bold">
+              <div className="text-2xl font-bold">
                 {schoolsQuery.isLoading ? <Skeleton className="h-8 w-10 inline-block" /> : `${schools.length}${isSchoolsTruncated ? "+" : ""}`}
-              </p>
+              </div>
               <p className="text-sm text-muted-foreground">Schools {isSchoolsTruncated && <span className="text-[11px]">(100+ loaded)</span>}</p>
               <p className="text-xs text-muted-foreground">{activeSchools} active · {setupSchools} setup · {suspendedSchools} suspended</p>
               {schoolsQuery.isError && <p className="text-xs text-amber-600">Failed to load schools</p>}
             </div>
             <div>
-              <p className="text-2xl font-bold">
+              <div className="text-2xl font-bold">
                 {membershipsQuery.isLoading ? <Skeleton className="h-8 w-10 inline-block" /> : `${distinctUsers}${isMembershipsTruncated ? "+" : ""}`}
-              </p>
+              </div>
               <p className="text-sm text-muted-foreground">Users {isMembershipsTruncated && <span className="text-[11px]">(100+ memberships loaded)</span>}</p>
               {membershipsQuery.isError && <p className="text-xs text-amber-600">Failed to load memberships</p>}
             </div>
             <div>
-              <p className="text-2xl font-bold">
+              <div className="text-2xl font-bold">
                 {membershipsQuery.isLoading ? <Skeleton className="h-8 w-10 inline-block" /> : `${memberships.length}${isMembershipsTruncated ? "+" : ""}`}
-              </p>
+              </div>
               <p className="text-sm text-muted-foreground">Memberships {isMembershipsTruncated && <span className="text-[11px]">(truncated)</span>}</p>
             </div>
           </CardContent>

@@ -74,7 +74,7 @@ export function SchoolList() {
   const { items: allItems, hasMore, isInitialLoading, isFetchingMore, isError, error, fetchMore, refetch } =
     useCursorPagination<School>({
       queryKey: platformKeys.schools({}),
-      queryFn: (params) => listSchools(params as never),
+      queryFn: (params) => listSchools(params),
       limit: 20,
     });
 

@@ -63,7 +63,7 @@ export function usePlatformAlerts() {
     const suspendedActive = memberships.filter((m) => suspendedIds.has(m.user_id) && m.status === "ACTIVE").length;
     if (suspendedActive) out.push({ message: `${suspendedActive} suspended users with active memberships`, href: "/platform/users" });
 
-    const schoolIdsWithMembers = new Set(memberships.filter((m) => (m as unknown as { school_id: string | null }).school_id).map((m) => (m as unknown as { school_id: string }).school_id));
+    const schoolIdsWithMembers = new Set(memberships.filter((m) => m.school_id).map((m) => m.school_id as string));
     const schoolsNoUsers = schools.filter((s) => !schoolIdsWithMembers.has(s.id));
     if (schoolsNoUsers.length && schools.length) out.push({ message: `${schoolsNoUsers.length} schools with no users`, href: "/platform/schools" });
 

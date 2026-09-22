@@ -30,12 +30,12 @@ export function PlatformCommandPalette({ open, onOpenChange }: { open: boolean; 
   });
   const schoolsQuery = useQuery({
     queryKey: platformKeys.schools({ limit: 100 }),
-    queryFn: () => listSchools({ limit: 100 } as never),
+    queryFn: () => listSchools({ limit: 100 }),
     enabled: open,
   });
   const usersQuery = useQuery({
     queryKey: platformKeys.users({ limit: 100 }),
-    queryFn: () => listUsers({ limit: 100 } as never),
+    queryFn: () => listUsers({ limit: 100 }),
     enabled: open,
   });
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, Search } from "lucide-react";
 import { useCursorPagination } from "@/hooks/use-cursor-pagination";
+import { useDebounce } from "@/hooks/use-debounce";
 import { listUsers, listOrganizations } from "@/services/iam";
 import { platformKeys } from "@/lib/query-keys";
 import type { User, UserStatus } from "@/types";
@@ -86,6 +87,8 @@ export function UserListPlatform() {
   const [sort, setSort] = useState<"created_desc" | "created_asc">("created_desc");
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  const debouncedSearch = useDebounce(search, 300);
+
   const orgsQuery = useQuery({
     queryKey: platformKeys.organizations({ limit: 100 }),
     queryFn: () => listOrganizations({ limit: 100 }),
@@ -93,35 +96,30 @@ export function UserListPlatform() {
 
   const { items: allItems, hasMore, isInitialLoading, isFetchingMore, isError, error, fetchMore, refetch } =
     useCursorPagination<User>({
-      queryKey: platformKeys.users({}),
-      queryFn: (params) => listUsers(params),
+      queryKey: platformKeys.users({ search: debouncedSearch || undefined }),
+      queryFn: (params) => listUsers({ ...params, search: debouncedSearch || undefined }),
       limit: 50,
     });
 
   const filtered = useMemo(() => {
     let items = allItems.filter((u) => {
-      const s = search.toLowerCase();
-      const matchesSearch =
-        !search ||
-        u.email?.toLowerCase().includes(s) ||
-        u.phone?.toLowerCase().includes(s) ||
-        u.id.toLowerCase().includes(s);
       const matchesStatus = statusFilter === "ALL" || u.status === statusFilter;
       const matchesPlatform =
         platformFilter === "ALL" ||
         (platformFilter === "PLATFORM" && u.is_platform_admin) ||
         (platformFilter === "NON_PLATFORM" && !u.is_platform_admin);
       const matchesOrg = orgFilter === "ALL" || u.memberships.some((m) => m.organization_id === orgFilter);
-      return matchesSearch && matchesStatus && matchesPlatform && matchesOrg;
+      return matchesStatus && matchesPlatform && matchesOrg;
     });
     items = [...items].sort((a, b) => {
       if (sort === "created_desc") return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     });
     return items;
-  }, [allItems, search, statusFilter, platformFilter, orgFilter, sort]);
+  }, [allItems, statusFilter, platformFilter, orgFilter, sort]);
 
-  const isFilteredEmpty = !isInitialLoading && allItems.length > 0 && filtered.length === 0;
+  const hasActiveFilters = !!debouncedSearch || statusFilter !== "ALL" || platformFilter !== "ALL" || orgFilter !== "ALL";
+  const isFilteredEmpty = !isInitialLoading && filtered.length === 0 && hasActiveFilters;
 
   return (
     <div className="space-y-4">
@@ -232,7 +230,11 @@ export function UserListPlatform() {
           </Button>
         </div>
       )}
-      {hasMore && filtered.length > 0 && <p className="text-center text-xs text-muted-foreground">Filters apply to loaded items only. Load more to search further.</p>}
+      {hasMore && (
+        <p className="text-center text-xs text-muted-foreground">
+          Showing first {filtered.length} results. Load more or refine your search.
+        </p>
+      )}
 
       <UserDialog open={dialogOpen} onOpenChange={setDialogOpen} user={null} />
     </div>

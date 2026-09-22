@@ -395,7 +395,7 @@ function Step4({
           short_name: step2.short_name || null,
           board: step2.board || null,
           affiliation_number: step2.affiliation_number || null,
-        } as never);
+        });
         schoolId = school.id;
         completed.push("School created");
       }
@@ -425,7 +425,7 @@ function Step4({
         phone: step3.phone || null,
         password: step3.password,
         school_id: schoolId ?? null,
-      } as never);
+      });
       completed.push("Admin user created");
 
       // 4. Create org-wide membership

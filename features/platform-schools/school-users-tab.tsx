@@ -28,7 +28,7 @@ export function SchoolUsersTab({ schoolId }: { schoolId: string }) {
   const userIds = [...new Set(memberships.items.map((m) => m.user_id))];
   const usersQuery = useQuery({
     queryKey: platformKeys.users({ limit: 200 }),
-    queryFn: () => listUsers({ limit: 200 } as never),
+    queryFn: () => listUsers({ limit: 200 }),
     enabled: userIds.length > 0,
   });
   const users = (usersQuery.data?.items ?? []).filter((u: User) => userIds.includes(u.id));

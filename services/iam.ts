@@ -1,4 +1,5 @@
 import { apiClient } from "./api-client";
+import { platformApiClient } from "./platform-api-client";
 import type {
   CursorPage,
   CursorParams,
@@ -50,8 +51,14 @@ export async function updateSchool(
   return data;
 }
 
+export interface UserListParams extends CursorParams {
+  status?: string;
+  is_platform_admin?: boolean;
+  search?: string;
+}
+
 export async function listUsers(
-  params: CursorParams = {},
+  params: UserListParams = {},
 ): Promise<CursorPage<User>> {
   const { data } = await apiClient.get<CursorPage<User>>("/users", { params });
   return data;
@@ -79,8 +86,14 @@ export async function deleteUser(userId: string, version: number): Promise<void>
   await apiClient.delete(`/users/${userId}`, { data: { version } });
 }
 
+export interface RoleListParams extends CursorParams {
+  scope_level?: string;
+  organization_id?: string;
+  is_system?: boolean;
+}
+
 export async function listRoles(
-  params: CursorParams = {},
+  params: RoleListParams = {},
 ): Promise<CursorPage<Role>> {
   const { data } = await apiClient.get<CursorPage<Role>>("/roles", { params });
   return data;
@@ -167,8 +180,12 @@ export async function revokeRoleFromMembership(
   await apiClient.delete(`/memberships/${membershipId}/roles/${roleId}`);
 }
 
+export interface OrganizationListParams extends CursorParams {
+  status?: string;
+}
+
 export async function listOrganizations(
-  params: CursorParams = {},
+  params: OrganizationListParams = {},
 ): Promise<CursorPage<Organization>> {
   const { data } = await apiClient.get<CursorPage<Organization>>("/organizations", {
     params,
@@ -191,5 +208,16 @@ export async function updateOrganization(
   input: OrganizationUpdate,
 ): Promise<Organization> {
   const { data } = await apiClient.patch<Organization>(`/organizations/${id}`, input);
+  return data;
+}
+
+export interface PlatformStats {
+  org_count: number;
+  school_count: number;
+  user_count: number;
+}
+
+export async function getPlatformStats(): Promise<PlatformStats> {
+  const { data } = await platformApiClient.get<PlatformStats>("/platform/stats");
   return data;
 }

@@ -65,7 +65,7 @@ function AddSchoolDialog({ orgId, open, onOpenChange }: { orgId: string; open: b
   const [affiliation, setAffiliation] = useState("");
 
   const mut = useMutation({
-    mutationFn: () => createSchool({ organization_id: orgId, code: code.trim(), name: name.trim(), short_name: shortName.trim() || null, board: board.trim() || null, affiliation_number: affiliation.trim() || null } as never),
+    mutationFn: () => createSchool({ organization_id: orgId, code: code.trim(), name: name.trim(), short_name: shortName.trim() || null, board: board.trim() || null, affiliation_number: affiliation.trim() || null }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: platformKeys.orgSchools(orgId) });
       void queryClient.invalidateQueries({ queryKey: platformKeys.schools() });
@@ -122,8 +122,8 @@ export function OrgSchoolsTab({ orgId }: OrgSchoolsTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { items, hasMore, isInitialLoading, isFetchingMore, isError, fetchMore } =
     useCursorPagination<School>({
-      queryKey: platformKeys.orgSchools(orgId),
-      queryFn: (params) => listSchools({ ...params, organization_id: orgId } as never),
+      queryKey: [...platformKeys.orgSchools(orgId), "infinite"],
+      queryFn: (params) => listSchools({ ...params, organization_id: orgId }),
     });
 
   if (isError) return <ErrorState title="Failed to load schools" />;
