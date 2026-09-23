@@ -400,23 +400,19 @@ function Step4({
         completed.push("School created");
       }
 
-      // 3. Create person (requires X-School-ID, per spec step 3)
-      if (schoolId) {
-        try {
-          const { data: person } = await platformApiClient.post<{ id: string }>("/persons", {
-            first_name: step3.first_name,
-            last_name: step3.last_name,
-            primary_email: step3.email,
-            primary_phone: step3.phone || null,
-          }, { headers: { "X-School-ID": schoolId } });
-          void person.id;
-          completed.push("Person record created");
-        } catch {
-          // If person creation fails, continue — user can be created without linked person (API gap)
-          completed.push("Person creation skipped (will be completed on first login)");
-        }
-      } else {
-        completed.push("Person creation deferred (no school)");
+      // 3. Create person (org-scoped — no X-School-ID needed or wanted)
+      try {
+        const { data: person } = await platformApiClient.post<{ id: string }>("/persons", {
+          first_name: step3.first_name,
+          last_name: step3.last_name,
+          primary_email: step3.email,
+          primary_phone: step3.phone || null,
+        });
+        void person.id;
+        completed.push("Person record created");
+      } catch {
+        // If person creation fails, continue — user can be created without linked person
+        completed.push("Person creation skipped (will be completed on first login)");
       }
 
       // 4. Create user (spec says person_id, but current API uses school_id; we pass both where supported)
