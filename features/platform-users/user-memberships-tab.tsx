@@ -38,7 +38,7 @@ function NewMembershipDialog({ userId, open, onOpenChange }: { userId: string; o
       onOpenChange(false);
       setSchoolId("");
     },
-    onError: showMutationError,
+    onError: (e: unknown) => showMutationError(e),
   });
 
   return (
