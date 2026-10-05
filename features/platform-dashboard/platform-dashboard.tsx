@@ -60,7 +60,7 @@ function NeedsAttention() {
     queryFn: () => listMemberships({ limit: 100 }),
   });
 
-  if (orgsQuery.isLoading || schoolsQuery.isLoading || usersQuery.isLoading) {
+  if (orgsQuery.isLoading || schoolsQuery.isLoading || usersQuery.isLoading || membershipsQuery.isLoading) {
     return <div className="space-y-2"><Skeleton className="h-10" /><Skeleton className="h-10" /><Skeleton className="h-10" /></div>;
   }
 

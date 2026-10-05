@@ -3,7 +3,8 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
+import { CreateSchoolDialog } from "./create-school-dialog";
 import { useCursorPagination } from "@/hooks/use-cursor-pagination";
 import { listSchools, listOrganizations } from "@/services/iam";
 import { platformKeys } from "@/lib/query-keys";
@@ -59,6 +60,7 @@ export function SchoolList() {
   const [statusFilter, setStatusFilter] = useState<SchoolStatus | "ALL">("ALL");
   const [orgFilter, setOrgFilter] = useState<string>("ALL");
   const [boardFilter, setBoardFilter] = useState<string>("ALL");
+  const [createOpen, setCreateOpen] = useState(false);
 
   const orgsQuery = useQuery({
     queryKey: platformKeys.organizations({ limit: 100 }),
@@ -102,9 +104,14 @@ export function SchoolList() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Schools</h1>
-        <p className="text-sm text-muted-foreground">All schools across the platform</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Schools</h1>
+          <p className="text-sm text-muted-foreground">All schools across the platform</p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="size-4" /> New School
+        </Button>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -201,6 +208,8 @@ export function SchoolList() {
         </div>
       )}
       {hasMore && filtered.length > 0 && <p className="text-center text-xs text-muted-foreground">Filters apply to loaded items only. Load more to search further.</p>}
+
+      <CreateSchoolDialog open={createOpen} onOpenChange={setCreateOpen} />
     </div>
   );
 }

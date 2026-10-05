@@ -2,23 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCursorPagination } from "@/hooks/use-cursor-pagination";
-import { createSchool, listSchools } from "@/services/iam";
+import { listSchools } from "@/services/iam";
 import { platformKeys } from "@/lib/query-keys";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/patterns/empty-state";
 import { ErrorState } from "@/components/patterns/error-state";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { GraduationCap, Plus } from "lucide-react";
+import { CreateSchoolDialog } from "@/features/platform-schools/create-school-dialog";
 import type { School } from "@/types";
 import { format } from "date-fns";
-import { toast } from "sonner";
-import { showMutationError } from "@/lib/error-messages";
 
 interface OrgSchoolsTabProps {
   orgId: string;
@@ -56,67 +51,6 @@ function RowSkeleton() {
   );
 }
 
-function AddSchoolDialog({ orgId, open, onOpenChange }: { orgId: string; open: boolean; onOpenChange: (o: boolean) => void }) {
-  const queryClient = useQueryClient();
-  const [name, setName] = useState("");
-  const [code, setCode] = useState("");
-  const [shortName, setShortName] = useState("");
-  const [board, setBoard] = useState("CBSE");
-  const [affiliation, setAffiliation] = useState("");
-
-  const mut = useMutation({
-    mutationFn: () => createSchool({ organization_id: orgId, code: code.trim(), name: name.trim(), short_name: shortName.trim() || null, board: board.trim() || null, affiliation_number: affiliation.trim() || null }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: platformKeys.orgSchools(orgId) });
-      void queryClient.invalidateQueries({ queryKey: platformKeys.schools() });
-      toast.success("School created");
-      onOpenChange(false);
-      setName(""); setCode(""); setShortName(""); setBoard("CBSE"); setAffiliation("");
-    },
-    onError: (err) => showMutationError(err),
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add School to Organization</DialogTitle>
-          <DialogDescription>Create a new school under this organization.</DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="school-name">School Name *</Label>
-            <Input id="school-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Lincoln Elementary" />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="school-code">Code *</Label>
-              <Input id="school-code" value={code} onChange={(e) => setCode(e.target.value)} placeholder="LES-001" className="font-mono" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="school-short">Short Name</Label>
-              <Input id="school-short" value={shortName} onChange={(e) => setShortName(e.target.value)} placeholder="LES" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="school-board">Board</Label>
-              <Input id="school-board" value={board} onChange={(e) => setBoard(e.target.value)} placeholder="CBSE" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="school-affiliation">Affiliation No.</Label>
-              <Input id="school-affiliation" value={affiliation} onChange={(e) => setAffiliation(e.target.value)} />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={() => mut.mutate()} disabled={!name.trim() || !code.trim() || mut.isPending}>{mut.isPending ? "Creating…" : "Create School"}</Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 export function OrgSchoolsTab({ orgId }: OrgSchoolsTabProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -130,6 +64,12 @@ export function OrgSchoolsTab({ orgId }: OrgSchoolsTabProps) {
 
   return (
     <div className="space-y-3">
+      <div className="flex justify-end">
+        <Button size="sm" onClick={() => setDialogOpen(true)}>
+          <Plus className="size-4" /> Add School
+        </Button>
+      </div>
+
       <div className="overflow-x-auto rounded-md border hidden sm:block">
         <table className="w-full min-w-[480px] text-sm">
           <thead className="border-b bg-muted/50">
@@ -179,12 +119,7 @@ export function OrgSchoolsTab({ orgId }: OrgSchoolsTabProps) {
         </div>
       )}
 
-      <div className="flex justify-start">
-        <Button variant="outline" size="sm" onClick={() => setDialogOpen(true)}>
-          <Plus className="size-4" /> Add School to This Organization
-        </Button>
-      </div>
-      <AddSchoolDialog orgId={orgId} open={dialogOpen} onOpenChange={setDialogOpen} />
+      <CreateSchoolDialog preselectedOrgId={orgId} open={dialogOpen} onOpenChange={setDialogOpen} />
     </div>
   );
 }

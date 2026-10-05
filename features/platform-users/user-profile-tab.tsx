@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { toast } from "sonner";
-import { getUser, updateUser } from "@/services/iam";
+import { getUser, updateUser, togglePlatformAdmin } from "@/services/iam";
 import { platformKeys } from "@/lib/query-keys";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,8 +65,27 @@ export function UserProfileTab({ userId }: UserProfileTabProps) {
     },
   });
 
-  // Platform admin toggle is not supported by current PATCH /users schema (requires backend change).
-  // We keep the danger-zone UX per spec but surface the gap clearly.
+  const platformAdminMutation = useMutation({
+    mutationFn: async (grant: boolean) => {
+      if (!user) throw new Error("No user");
+      return togglePlatformAdmin(user.id, grant, user.version);
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(platformKeys.user(userId), updated);
+      void queryClient.invalidateQueries({ queryKey: platformKeys.users() });
+      toast.success(updated.is_platform_admin ? "Platform admin access granted" : "Platform admin access removed");
+      setPendingPlatformToggle(null);
+    },
+    onError: (err) => {
+      if (isStaleResourceError(err)) {
+        setStaleOpen(true);
+        setPendingPlatformToggle(null);
+        return;
+      }
+      showMutationError(err);
+      setPendingPlatformToggle(null);
+    },
+  });
 
   async function handlePasswordReset() {
     try {
@@ -185,10 +204,10 @@ export function UserProfileTab({ userId }: UserProfileTabProps) {
             ? [
                 {
                   label: "Remove Platform Admin access",
-                  description: "This will revoke full unrestricted access to all organizations, schools, and users. (Requires backend support for is_platform_admin toggle.)",
+                  description: "This will revoke full unrestricted access to all organizations, schools, and users.",
                   confirmValue: user.email ?? user.id,
                   buttonLabel: "Remove Platform Admin",
-                  isLoading: false,
+                  isLoading: platformAdminMutation.isPending,
                   onConfirm: () => setPendingPlatformToggle("revoke"),
                 } as const,
               ]
@@ -196,10 +215,10 @@ export function UserProfileTab({ userId }: UserProfileTabProps) {
                 {
                   label: "Grant Platform Admin access",
                   description:
-                    "This gives full unrestricted access to all organizations, schools, and users on the platform. (Requires backend support for is_platform_admin toggle.)",
+                    "This gives full unrestricted access to all organizations, schools, and users on the platform.",
                   confirmValue: user.email ?? user.id,
                   buttonLabel: "Grant Platform Admin",
-                  isLoading: false,
+                  isLoading: platformAdminMutation.isPending,
                   onConfirm: () => setPendingPlatformToggle("grant"),
                 } as const,
               ]),
@@ -253,10 +272,7 @@ export function UserProfileTab({ userId }: UserProfileTabProps) {
         confirmLabel={pendingPlatformToggle === "grant" ? "Grant" : "Remove"}
         destructive
         onConfirm={async () => {
-          // Placeholder: backend does not expose is_platform_admin toggle via PATCH today.
-          // Keep dialog UX per spec, log audit via client toast.
-          toast.info("Platform admin toggle is not yet supported by the API (requires backend change).");
-          setPendingPlatformToggle(null);
+          await platformAdminMutation.mutateAsync(pendingPlatformToggle === "grant");
         }}
       />
 

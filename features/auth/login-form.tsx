@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function LoginForm() {
   const { login, isAuthenticated, isLoading, user } = useAuth();
   const router = useRouter();
-  const [formError, setFormError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<React.ReactNode | null>(null);
   const [retryIn, setRetryIn] = useState<number | null>(null);
 
   const {
@@ -40,10 +40,8 @@ export function LoginForm() {
         router.replace("/force-change-password");
       } else if (user?.is_platform_admin) {
         router.replace("/platform/dashboard");
-      } else {
-        // Non-platform users should not use the admin portal - send to login with message
-        router.replace("/login");
       }
+      // Non-platform-admin users: stay on /login — onSubmit already shows the error.
     }
   }, [isAuthenticated, isLoading, user, router]);
 
@@ -75,7 +73,13 @@ export function LoginForm() {
       } else if (me.is_platform_admin) {
         router.replace("/platform/dashboard");
       } else {
-        setFormError("This account is not a platform administrator. Please use the school portal.");
+        const portalUrl = process.env.NEXT_PUBLIC_PORTAL_URL || "http://localhost:3000";
+        setFormError(
+          <>
+            This account is not a platform administrator.{" "}
+            <a href={portalUrl} className="underline font-medium">Go to School Portal</a>
+          </>
+        );
       }
     } catch (error) {
       const apiError = error as ApiError;

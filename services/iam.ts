@@ -86,6 +86,18 @@ export async function deleteUser(userId: string, version: number): Promise<void>
   await apiClient.delete(`/users/${userId}`, { data: { version } });
 }
 
+export async function togglePlatformAdmin(
+  userId: string,
+  isPlatformAdmin: boolean,
+  version: number,
+): Promise<User> {
+  const { data } = await apiClient.patch<User>(`/users/${userId}/platform-admin`, {
+    is_platform_admin: isPlatformAdmin,
+    version,
+  });
+  return data;
+}
+
 export interface RoleListParams extends CursorParams {
   scope_level?: string;
   organization_id?: string;

@@ -21,7 +21,7 @@ export default function ForceChangePasswordRoute() {
       return;
     }
     if (!user.must_change_password) {
-      router.replace("/home");
+      router.replace("/platform/dashboard");
     }
   }, [isLoading, user, router]);
 

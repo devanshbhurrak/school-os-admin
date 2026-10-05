@@ -23,6 +23,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ErrorState } from "@/components/patterns/error-state";
 import { EmptyState } from "@/components/patterns/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { formatDate } from "@/lib/format";
 import { UserDialog } from "@/features/settings/user-dialog";
 
 const STATUS_OPTIONS: { value: UserStatus | "ALL"; label: string }[] = [
@@ -69,11 +70,7 @@ function UserRow({ user }: { user: User }) {
         {user.memberships.length}
       </td>
       <td className="py-3 pr-4 text-xs text-muted-foreground whitespace-nowrap">
-        {new Date(user.created_at).toLocaleDateString("en-IN", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })}
+        {formatDate(user.created_at)}
       </td>
     </tr>
   );
@@ -214,7 +211,7 @@ export function UserListPlatform() {
                     <StatusBadge status={user.status} />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {user.is_platform_admin ? "Platform Admin · " : ""}{user.memberships.length} memberships · {new Date(user.created_at).toLocaleDateString()}
+                    {user.is_platform_admin ? "Platform Admin · " : ""}{user.memberships.length} memberships · {formatDate(user.created_at)}
                   </p>
                 </Link>
               ))}

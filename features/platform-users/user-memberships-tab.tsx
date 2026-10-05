@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCursorPagination } from "@/hooks/use-cursor-pagination";
-import { createMembership, deleteMembership, listMemberships } from "@/services/iam";
+import { createMembership, deleteMembership, listMemberships, listRoles, grantRoleToMembership, revokeRoleFromMembership } from "@/services/iam";
 import { platformKeys } from "@/lib/query-keys";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,10 @@ import { EmptyState } from "@/components/patterns/empty-state";
 import { ErrorState } from "@/components/patterns/error-state";
 import { ConfirmDialog } from "@/components/patterns/confirm-dialog";
 import { StaleResourceDialog } from "@/components/patterns/stale-resource-dialog";
-import { KeyRound, Plus } from "lucide-react";
-import type { Membership } from "@/types";
+import { KeyRound, Plus, X } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import type { Membership, Role } from "@/types";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { showMutationError, isStaleResourceError } from "@/lib/error-messages";
@@ -52,6 +54,13 @@ function NewMembershipDialog({ userId, open, onOpenChange }: { userId: string; o
           <div className="space-y-1.5">
             <Label htmlFor="school-id">School ID (optional)</Label>
             <Input id="school-id" value={schoolId} onChange={(e) => setSchoolId(e.target.value)} placeholder="Leave blank for org-wide" />
+            {!schoolId.trim() && (
+              <Alert className="mt-2">
+                <AlertDescription className="text-xs">
+                  Leaving School ID empty grants <strong>organization-wide access</strong> across all schools in the org.
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -63,7 +72,113 @@ function NewMembershipDialog({ userId, open, onOpenChange }: { userId: string; o
   );
 }
 
-function Row({ membership, onEnd }: { membership: Membership; onEnd: (m: Membership) => void }) {
+function ManageRolesDialog({
+  membership,
+  roles,
+  open,
+  onOpenChange,
+  userId,
+}: {
+  membership: Membership | null;
+  roles: Role[];
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  userId: string;
+}) {
+  const qc = useQueryClient();
+  const [selectedRoleId, setSelectedRoleId] = useState("");
+
+  const grantMut = useMutation({
+    mutationFn: (roleId: string) => grantRoleToMembership(membership!.id, { role_id: roleId }),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: platformKeys.userMemberships(userId) });
+      toast.success("Role granted");
+      setSelectedRoleId("");
+    },
+    onError: (e: unknown) => showMutationError(e),
+  });
+
+  const revokeMut = useMutation({
+    mutationFn: (roleId: string) => revokeRoleFromMembership(membership!.id, roleId),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: platformKeys.userMemberships(userId) });
+      toast.success("Role revoked");
+    },
+    onError: (e: unknown) => showMutationError(e),
+  });
+
+  if (!membership) return null;
+
+  const assignedCodes = membership.role_codes;
+  const availableRoles = roles.filter((r) => !assignedCodes.includes(r.code));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Manage Roles</DialogTitle>
+          <DialogDescription>Grant or revoke roles for this membership.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1.5 block">Current Roles</Label>
+            {assignedCodes.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No roles assigned</p>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {assignedCodes.map((code) => {
+                  const role = roles.find((r) => r.code === code);
+                  return (
+                    <span key={code} className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-1 font-mono text-xs">
+                      {code}
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-destructive"
+                        disabled={revokeMut.isPending}
+                        onClick={() => {
+                          if (role) revokeMut.mutate(role.id);
+                          else toast.error(`Role "${code}" not found in loaded list. Reload and try again.`);
+                        }}
+                      >
+                        <X className="size-3" />
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          {availableRoles.length > 0 && (
+            <div className="flex gap-2">
+              <Select value={selectedRoleId} onValueChange={setSelectedRoleId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select a role to add" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableRoles.map((r) => (
+                    <SelectItem key={r.id} value={r.id}>{r.code} — {r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                disabled={!selectedRoleId || grantMut.isPending}
+                onClick={() => { if (selectedRoleId) grantMut.mutate(selectedRoleId); }}
+              >
+                {grantMut.isPending ? "Adding…" : "Add"}
+              </Button>
+            </div>
+          )}
+          <div className="flex justify-end">
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>Done</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Row({ membership, onEnd, onManageRoles }: { membership: Membership; onEnd: (m: Membership) => void; onManageRoles: (m: Membership) => void }) {
   return (
     <tr className="border-b hover:bg-muted/50">
       <td className="py-2.5 pl-4 pr-2 text-sm">
@@ -97,7 +212,10 @@ function Row({ membership, onEnd }: { membership: Membership; onEnd: (m: Members
       <td className="py-2.5 px-2 text-xs text-muted-foreground whitespace-nowrap">
         {membership.start_date ? format(new Date(membership.start_date), "MMM d, yyyy") : "—"}
       </td>
-      <td className="py-2.5 pr-4 text-right">
+      <td className="py-2.5 pr-4 text-right space-x-1">
+        <Button variant="ghost" size="sm" onClick={() => onManageRoles(membership)}>
+          Roles
+        </Button>
         <Button variant="ghost" size="sm" onClick={() => onEnd(membership)}>
           End
         </Button>
@@ -110,7 +228,13 @@ export function UserMembershipsTab({ userId }: UserMembershipsTabProps) {
   const qc = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [ending, setEnding] = useState<Membership | null>(null);
+  const [managingRoles, setManagingRoles] = useState<Membership | null>(null);
   const [staleOpen, setStaleOpen] = useState(false);
+
+  const rolesQuery = useQuery({
+    queryKey: platformKeys.roles({ limit: 200 }),
+    queryFn: () => listRoles({ limit: 200 }),
+  });
 
   const { items, hasMore, isInitialLoading, isFetchingMore, isError, error, fetchMore, refetch } =
     useCursorPagination<Membership>({
@@ -178,7 +302,7 @@ export function UserMembershipsTab({ userId }: UserMembershipsTabProps) {
                 </td>
               </tr>
             ) : (
-              items.map((m) => <Row key={m.id} membership={m} onEnd={setEnding} />)
+              items.map((m) => <Row key={m.id} membership={m} onEnd={setEnding} onManageRoles={setManagingRoles} />)
             )}
           </tbody>
         </table>
@@ -193,6 +317,13 @@ export function UserMembershipsTab({ userId }: UserMembershipsTabProps) {
       )}
 
       <NewMembershipDialog userId={userId} open={createOpen} onOpenChange={setCreateOpen} />
+      <ManageRolesDialog
+        membership={managingRoles}
+        roles={rolesQuery.data?.items ?? []}
+        open={!!managingRoles}
+        onOpenChange={(o) => !o && setManagingRoles(null)}
+        userId={userId}
+      />
 
       <ConfirmDialog
         open={!!ending}
