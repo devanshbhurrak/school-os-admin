@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { setSchoolId } from "@/services/api-client";
 import { PlatformSidebar } from "./platform-sidebar";
 import { PlatformHeader } from "./platform-header";
+import { OfflineBanner } from "@/components/patterns/offline-banner";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function ShellSkeleton() {
@@ -83,6 +84,7 @@ export function PlatformShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-dvh">
       <PlatformSidebar />
       <div className="flex min-w-0 flex-1 flex-col">
+        <OfflineBanner />
         <PlatformHeader />
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>

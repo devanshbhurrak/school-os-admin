@@ -53,17 +53,11 @@ const step1Schema = z.object({
 });
 
 const step2Schema = z.object({
-  skip: z.boolean(),
-  name: z.string().optional(),
+  name: z.string().min(1, "School name is required"),
   short_name: z.string().optional(),
-  code: z.string().optional(),
+  code: z.string().min(2, "School code is required").regex(/^[A-Z0-9_-]+$/, "Use uppercase letters, numbers, hyphens, underscores"),
   board: z.string().optional(),
   affiliation_number: z.string().optional(),
-}).superRefine((data, ctx) => {
-  if (!data.skip) {
-    if (!data.name?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "School name is required", path: ["name"] });
-    if (!data.code?.trim()) ctx.addIssue({ code: z.ZodIssueCode.custom, message: "School code is required", path: ["code"] });
-  }
 });
 
 const step3Schema = z.object({
@@ -194,50 +188,42 @@ function Step2({
   const { register, handleSubmit, watch, setValue, formState: { errors } } =
     useForm<Step2Values>({
       resolver: zodResolver(step2Schema),
-      defaultValues: { skip: false },
     });
 
-  const skip = watch("skip");
+  const name = watch("name");
+
+  function handleNameBlur() {
+    if (!watch("code")) {
+      setValue("code", slugify(name ?? "").toUpperCase().replace(/-/g, "_"));
+    }
+  }
 
   return (
     <form onSubmit={handleSubmit(onNext)} className="space-y-5">
-      <div className="flex items-center gap-3">
-        <Switch
-          id="skip-school"
-          checked={skip}
-          onCheckedChange={(v) => setValue("skip", v)}
-        />
-        <Label htmlFor="skip-school" className="font-normal">
-          Skip — I&apos;ll add schools later
-        </Label>
-      </div>
-
-      {!skip && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2">
-            <Label htmlFor="s2-name">School Name *</Label>
-            <Input id="s2-name" {...register("name")} />
-            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="s2-short">Short Name</Label>
-            <Input id="s2-short" {...register("short_name")} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="s2-code">Code *</Label>
-            <Input id="s2-code" {...register("code")} className="font-mono" />
-            {errors.code && <p className="text-xs text-destructive">{errors.code.message}</p>}
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="s2-board">Board</Label>
-            <Input id="s2-board" {...register("board")} placeholder="CBSE, ICSE, State" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="s2-affiliation">Affiliation No.</Label>
-            <Input id="s2-affiliation" {...register("affiliation_number")} />
-          </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5 sm:col-span-2">
+          <Label htmlFor="s2-name">School Name *</Label>
+          <Input id="s2-name" {...register("name")} onBlur={handleNameBlur} />
+          {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
-      )}
+        <div className="space-y-1.5">
+          <Label htmlFor="s2-short">Short Name</Label>
+          <Input id="s2-short" {...register("short_name")} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="s2-code">Code *</Label>
+          <Input id="s2-code" {...register("code")} className="font-mono" />
+          {errors.code && <p className="text-xs text-destructive">{errors.code.message}</p>}
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="s2-board">Board</Label>
+          <Input id="s2-board" {...register("board")} placeholder="CBSE, ICSE, State" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="s2-affiliation">Affiliation No.</Label>
+          <Input id="s2-affiliation" {...register("affiliation_number")} />
+        </div>
+      </div>
 
       <div className="flex justify-between">
         <Button type="button" variant="outline" onClick={onBack}>← Back</Button>
@@ -363,13 +349,6 @@ function Step4({
     let orgId: string | undefined;
     let schoolId: string | undefined;
 
-    // Validation: if school was skipped but admin user requires person, require school per spec
-    if (step2.skip) {
-      // Spec: make First School required when creating an admin user
-      // If school is skipped, person creation must be deferred; we allow but note it
-      // For Phase 1 we allow skip, but create person will be deferred
-    }
-
     try {
       // 1. Create organization
       const org = await createOrganization({
@@ -385,20 +364,17 @@ function Step4({
       orgId = org.id;
       completed.push("Organization created");
 
-      // 2. Create school (optional)
-      let school: School | undefined;
-      if (!step2.skip && step2.name && step2.code) {
-        school = await createSchool({
-          organization_id: org.id,
-          code: step2.code,
-          name: step2.name,
-          short_name: step2.short_name || null,
-          board: step2.board || null,
-          affiliation_number: step2.affiliation_number || null,
-        });
-        schoolId = school.id;
-        completed.push("School created");
-      }
+      // 2. Create school
+      const school = await createSchool({
+        organization_id: org.id,
+        code: step2.code,
+        name: step2.name,
+        short_name: step2.short_name || null,
+        board: step2.board || null,
+        affiliation_number: step2.affiliation_number || null,
+      });
+      schoolId = school.id;
+      completed.push("School created");
 
       // 3. Create person (org-scoped — no X-School-ID needed or wanted)
       try {
@@ -536,22 +512,12 @@ function Step4({
           )}
         </div>
 
-        {!step2.skip && step2.name && (
-          <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 px-4 py-3">
-            <span className="text-muted-foreground">First School</span>
-            <span className="font-medium">{step2.name}</span>
-            {step2.code && (
-              <>
-                <span className="text-muted-foreground">Code</span>
-                <span className="font-mono">{step2.code}</span>
-              </>
-            )}
-          </div>
-        )}
-
-        {step2.skip && (
-          <div className="px-4 py-3 text-muted-foreground italic">No school — to be added later</div>
-        )}
+        <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 px-4 py-3">
+          <span className="text-muted-foreground">First School</span>
+          <span className="font-medium">{step2.name}</span>
+          <span className="text-muted-foreground">Code</span>
+          <span className="font-mono">{step2.code}</span>
+        </div>
 
         <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 px-4 py-3">
           <span className="text-muted-foreground">Admin User</span>
@@ -562,10 +528,7 @@ function Step4({
       </div>
 
       <p className="text-xs text-muted-foreground">
-        This will create: 1 organization
-        {!step2.skip && step2.name ? ", 1 school" : ""}
-        , 1 admin user account, org-wide membership with Org Admin role
-        {!step2.skip && step2.name ? ", school membership with School Admin role" : ""}.
+        This will create: 1 organization, 1 school, 1 admin user account, org-wide membership with Org Admin role, and school membership with School Admin role.
       </p>
 
       <div className="flex justify-between">

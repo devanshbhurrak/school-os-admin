@@ -33,16 +33,10 @@ export function AuditLogPage() {
   if (entityType !== "ALL") params.entity_type = entityType;
   if (actorId.trim()) params.actor_user_id = actorId.trim();
   if (schoolId.trim()) params.school_id = schoolId.trim();
+  if (orgId.trim()) params.organization_id = orgId.trim();
+  if (action !== "ALL") params.action = action;
   if (from) params.created_from = new Date(from + "T00:00:00.000Z").toISOString();
   if (to) params.created_to = new Date(to + "T23:59:59.999Z").toISOString();
-  // API gap: organization_id and action not yet supported server-side; we keep them in queryKey
-  // but also apply client-side filtering inside AuditLogTable via wrapper. For now the table
-  // shows unfiltered results; we surface a hint. Client-side filtering of the loaded page is
-  // handled by passing organization_id/action into the audit table's post-filter.
-
-  const auditParams: AuditLogListParams = { ...params };
-  if (action !== "ALL") auditParams.action = action;
-  if (orgId.trim()) auditParams.organization_id = orgId.trim();
 
   const hasFilters = entityType !== "ALL" || action !== "ALL" || actorId || schoolId || orgId || from || to;
 
@@ -74,7 +68,7 @@ export function AuditLogPage() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Organization ID</Label>
-              <Input placeholder="organization_id (client-side)" value={orgId} onChange={(e) => setOrgId(e.target.value)} />
+              <Input placeholder="organization_id" value={orgId} onChange={(e) => setOrgId(e.target.value)} />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs">School ID</Label>
@@ -118,11 +112,11 @@ export function AuditLogPage() {
               </Button>
             </div>
           )}
-          <p className="mt-3 text-xs text-muted-foreground">Organization and Action filters are client-side (limited to loaded page) until backend adds <code>organization_id</code> and <code>action</code> support. Export is coming soon. Other filters are server-side.</p>
+          <p className="mt-3 text-xs text-muted-foreground">All filters are applied server-side. Export is coming soon.</p>
         </CardContent>
       </Card>
 
-      <AuditLogTable queryKey={platformKeys.audit(auditParams)} params={params} clientFilter={{ organization_id: orgId.trim() || undefined, action: action !== "ALL" ? action : undefined }} />
+      <AuditLogTable queryKey={platformKeys.audit(params)} params={params} />
     </div>
   );
 }

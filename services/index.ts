@@ -6,3 +6,4 @@ export * from "./addresses";
 export * from "./academics";
 export * from "./iam";
 export * from "./audit";
+export * from "./system";

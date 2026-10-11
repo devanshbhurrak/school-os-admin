@@ -133,4 +133,11 @@ export const platformKeys = {
 
   // Platform stats
   platformStats: () => ["platform", "stats"] as const,
+
+  // System health (B4d)
+  outboxSummary: () => ["platform", "outbox", "summary"] as const,
+  outboxEvents: (params: CursorParams = {}) =>
+    ["platform", "outbox", "events", params] as const,
+  featureFlags: (params: CursorParams = {}) =>
+    ["platform", "feature-flags", params] as const,
 };

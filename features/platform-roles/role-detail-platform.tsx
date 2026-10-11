@@ -162,7 +162,7 @@ export function RoleDetailPlatform({ roleId }: { roleId: string }) {
           <span>{role.permission_codes.length} permissions</span>
         </div>
         {role.description && <p className="text-sm text-muted-foreground max-w-2xl">{role.description}</p>}
-        <p className="text-xs text-muted-foreground">Platform view is read-only for school-scoped and system roles.</p>
+        <p className="text-xs text-muted-foreground">Platform view is read-only for system and school-scoped roles. Custom organization roles are editable within organization settings.</p>
       </div>
 
       <Card>
